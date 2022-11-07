@@ -1,0 +1,52 @@
+- name: Installing RabbitMQ to Prod Hosts
+  hosts: Production[0:2]
+  order: sorted
+  serial: 1
+  become: yes
+  become_method: sudo
+
+  tasks:
+  - name: "Add clusters to host"
+    shell:
+      cmd: |
+        cat >> /etc/hosts << EOF
+        {{ linux_1 }}
+        {{ linux_2 }}
+        {{ linux_3 }}
+        EOF
+
+  - copy:
+      src: ./rabbitmq.sh
+      dest: ./rabbitmq.sh
+
+  - name: Executable mod for redis.sh
+    shell: chmod +x ./rabbitmq.sh
+    
+  - name: Installing RabbitMq
+    shell: ./rabbitmq.sh {{ username }} {{ ProjectName }}_{{ Year }}_??! {{ FirstServer }} >> rabbitmq.txt
+
+  - name: Config Cronjob for RabbitMQ Log Cleanup
+    cron:
+      name: "RabbitMQ Log Cleaning"
+      minute: "08"
+      hour: "10"
+      job: find /rabbitmq/rabbit_log/ -name "*.log" -type f -mtime +30 -exec rm -rf {} \;
+
+  - name: Change RabbitMQ-Server Log Rotate
+    shell:
+        cmd: |
+          cat > /etc/logrotate.d/rabbitmq-server << EOF
+          /rabbitmq/rabbit_log/*.log
+          /rabbitmq/rabbit_log/log/*.log
+          {
+            daily
+            missingok
+            copytruncate
+            rotate 15
+            compress
+            notifempty
+          }
+          EOF
+
+  - name: Restarting Logrotate
+    shell: systemctl restart logrotate

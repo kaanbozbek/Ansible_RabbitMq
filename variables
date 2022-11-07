@@ -1,0 +1,6 @@
+rabbitmq_slave: 10.115.207.250 
+rabbitmq_master: 10.115.207.54
+linux_1: '10.115.207.54 DTEKAPPANSIBLET01'
+linux_2: '10.115.207.250 DTEKAPPANSIBLET02'
+
+

@@ -1,0 +1,43 @@
+---
+- name: Installing RabbitMQ to Test Host
+  hosts: Test
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+  - copy:
+      src: ./rabbitmq_test_config.sh
+      dest: ./rabbitmq_test_config.sh
+
+  - name: Executable mod for rabbitmq_test_config.sh
+    shell: chmod +x ./rabbitmq_test_config.sh
+
+  - name: Installing and configuring Test RabbitMQ
+    shell: ./rabbitmq_test_config.sh {{ username }} {{ ProjectName }}_{{ Year }}_??! >> rabbitmq.txt
+
+  - name: Config Cronjob for RabbitMQ Log Cleanup
+    cron:
+      name: "RabbitMQ Log Cleaning"
+      minute: "08"
+      hour: "10"
+      job: find /rabbitmq/rabbit_log/ -name "*.log" -type f -mtime +30 -exec rm -rf {} \;
+
+  - name: Change RabbitMQ-Server Log Rotate
+    shell:
+        cmd: |
+          cat > /etc/logrotate.d/rabbitmq-server << EOF
+          /rabbitmq/rabbit_log/*.log
+          /rabbitmq/rabbit_log/log/*.log
+          {
+            daily
+            missingok
+            copytruncate
+            rotate 7
+            compress
+            notifempty
+          }
+          EOF
+
+  - name: Restarting Logrotate
+    shell: systemctl restart logrotate
